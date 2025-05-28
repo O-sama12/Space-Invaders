@@ -1,183 +1,363 @@
+"""
+SPACE INVADER GAME
+A classic arcade-style game where the player shoots descending aliens.
+Includes menu system, high score tracking, and game over screens.
+"""
+
 import math
 import random
-
 import pygame
 from pygame import mixer
 
-# Intialize the pygame
+# ==================== INITIALIZATION ====================
+# Initialize pygame and create game window
 pygame.init()
+screen = pygame.display.set_mode((800, 600))  # Set screen dimensions
 
-# create the screen
-screen = pygame.display.set_mode((800, 600))
+# ==================== COLOR DEFINITIONS ====================
+# Define color constants for easy reference
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)      # Used for positive actions (start, restart)
+RED = (255, 0, 0)        # Used for quit buttons
+BLUE = (0, 0, 128)       # Used for title text
+GOLD = (255, 215, 0)     # Used for high score celebration
 
-# Background
+# ==================== GAME ASSETS ====================
+# Load background image and sounds
 background = pygame.image.load('background.png')
+mixer.music.load("background.wav")  # Background music
+mixer.music.play(-1)  # Play music on loop
 
-# Sound
-mixer.music.load("background.wav")
-mixer.music.play(-1)
-
-# Caption and Icon
+# Set window title and icon
 pygame.display.set_caption("Space Invader")
 icon = pygame.image.load('ufo.png')
 pygame.display.set_icon(icon)
 
-# Player
+# ==================== PLAYER SETUP ====================
 playerImg = pygame.image.load('player.png')
-playerX = 370
-playerY = 480
-playerX_change = 0
+playerX = 370  # Initial X position (centered)
+playerY = 480  # Initial Y position (near bottom)
+playerX_change = 0  # Movement speed
 
-# Enemy
-enemyImg = []
-enemyX = []
-enemyY = []
-enemyX_change = []
-enemyY_change = []
-num_of_enemies = 6
+# ==================== ENEMY SETUP ====================
+enemyImg = []  # List to store enemy images
+enemyX = []    # List for enemy X positions
+enemyY = []    # List for enemy Y positions
+enemyX_change = []  # List for enemy horizontal speed
+enemyY_change = []  # List for enemy vertical drop amount
+num_of_enemies = 6  # Total number of enemies
 
+# Initialize enemies with random positions
 for i in range(num_of_enemies):
     enemyImg.append(pygame.image.load('enemy.png'))
-    enemyX.append(random.randint(0, 736))
-    enemyY.append(random.randint(50, 150))
-    enemyX_change.append(4)
-    enemyY_change.append(40)
+    enemyX.append(random.randint(0, 736))  # Random X within screen bounds
+    enemyY.append(random.randint(50, 150))  # Random Y in top area
+    enemyX_change.append(4)  # Initial horizontal speed
+    enemyY_change.append(40)  # Amount to drop when hitting screen edge
 
-# Bullet
-
-# Ready - You can't see the bullet on the screen
-# Fire - The bullet is currently moving
-
+# ==================== BULLET SETUP ====================
 bulletImg = pygame.image.load('bullet.png')
-bulletX = 0
-bulletY = 480
-bulletX_change = 0
-bulletY_change = 10
-bullet_state = "ready"
+bulletX = 0  # Initial position (updated when fired)
+bulletY = 480  # Starts at player height
+bulletX_change = 0  # No horizontal movement
+bulletY_change = 10  # Speed moving upward
+bullet_state = "ready"  # "ready" or "fire" state
 
-# Score
+# ==================== SCORE SYSTEM ====================
+score_value = 0  # Current game score
+high_score = 0   # All-time high score
+new_high_score = False  # Flag for new high score achievement
 
-score_value = 0
+# Try to load previous high score from file
+try:
+    with open('highscore.txt', 'r') as f:
+        high_score = int(f.read())
+except:
+    high_score = 0  # Default if file doesn't exist
+
+# Font setup for score display
 font = pygame.font.Font('freesansbold.ttf', 32)
-
-textX = 10
+textX = 10  # Score position
 testY = 10
 
-# Game Over
-over_font = pygame.font.Font('freesansbold.ttf', 64)
+# ==================== GAME STATE MANAGEMENT ====================
+game_state = "menu"  # "menu", "play", or potentially others
+game_over = False    # Flag for game over condition
 
+# Fonts for different text elements
+over_font = pygame.font.Font('freesansbold.ttf', 72)  # Game over text
+button_font = pygame.font.Font('freesansbold.ttf', 36)  # Button text
+title_font = pygame.font.Font('freesansbold.ttf', 64)# Menu title
+menu_font = pygame.font.Font('freesansbold.ttf', 48)  # Menu items
+
+# ==================== GAME FUNCTIONS ====================
+
+def reset_game():
+    """Reset all game variables to their initial state"""
+    global playerX, playerY, playerX_change
+    global enemyX, enemyY, enemyX_change, enemyY_change
+    global bulletX, bulletY, bullet_state
+    global score_value, new_high_score
+    
+    # Reset player position
+    playerX = 370
+    playerY = 480
+    playerX_change = 0
+    
+    # Reset enemies with new random positions
+    for i in range(num_of_enemies):
+        enemyX[i] = random.randint(0, 736)
+        enemyY[i] = random.randint(50, 150)
+        enemyX_change[i] = 4
+        enemyY_change[i] = 40
+    
+    # Reset bullet
+    bulletX = 0
+    bulletY = 480
+    bullet_state = "ready"
+    
+    # Reset score (but keep high score)
+    score_value = 0
+    new_high_score = False
+
+def save_high_score(score):
+    """Save the high score to a file for persistence"""
+    with open('highscore.txt', 'w') as f:
+        f.write(str(score))
 
 def show_score(x, y):
-    score = font.render("Score : " + str(score_value), True, (255, 255, 255))
+    """Display current score and high score on screen"""
+    score = font.render(f"Score: {score_value}", True, WHITE)
     screen.blit(score, (x, y))
+    
+    high_score_text = font.render(f"High Score: {high_score}", True, WHITE)
+    scree.blit(high_score_text, (x, y + 40))
 
-
-def game_over_text():
-    over_text = over_font.render("GAME OVER", True, (255, 255, 255))
-    screen.blit(over_text, (200, 250))
-
+def game_over_screen():
+    """
+    Display game over screen with:
+    - Game over text
+    - Final score
+    - High score celebration (if applicable)
+    - Restart and quit buttons
+    """
+    # Semi-transparent overlay for better readability
+    overlay = pygame.Surface((800, 600), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 200))
+    screen.blit(overlay, (0, 0))
+    
+    # Game Over text (centered)
+    over_text = over_font.render("GAME OVER", True, WHITE)
+    over_rect = over_text.get_rect(center=(400, 150))
+    screen.blit(over_text, over_rect)
+    
+    # Final score display
+    final_score = button_font.render(f"Final Score: {score_value}", True, WHITE)
+    score_rect = final_score.get_rect(center=(400, 230))
+    screen.blit(final_score, score_rect)
+    
+    # Special message if player achieved new high score
+    if new_high_score:
+        congrats_text = button_font.render("NEW HIGH SCORE!", True, GOLD)
+        congrats_rect = congrats_text.get_rect(center=(400, 280))
+        screen.blit(congrats_text, congrats_rect)
+    
+    # Restart button (green)
+    restart_rect = pygame.Rect(200, 350, 200, 60)
+    pygame.draw.rect(screen, GREEN, restart_rect, border_radius=10)
+    pygame.draw.rect(screen, WHITE, restart_rect, 2, border_radius=10)
+    restart_text = button_font.render("Restart", True, BLACK)
+    restart_text_rect = restart_text.get_rect(center=restart_rect.center)
+    screen.blit(restart_text, restart_text_rect)
+    
+    # Quit button (red)
+    quit_rect = pygame.Rect(400, 350, 200, 60)
+    pygame.draw.rect(screen, RED, quit_rect, border_radius=10)
+    pygame.draw.rect(screen, WHITE, quit_rect, 2, border_radius=10)
+    quit_text = button_font.render("Quit", True, WHITE)
+    quit_text_rect = quit_text.get_rect(center=quit_rect.center)
+    screen.blit(quit_text, quit_text_rect)
+    
+    return restart_rect, quit_rect  # Return button areas for click detection
 
 def player(x, y):
+    """Draw player ship at specified coordinates"""
     screen.blit(playerImg, (x, y))
 
-
 def enemy(x, y, i):
+    """Draw enemy at specified coordinates"""
     screen.blit(enemyImg[i], (x, y))
 
-
 def fire_bullet(x, y):
+    """Fire bullet from specified position"""
     global bullet_state
     bullet_state = "fire"
-    screen.blit(bulletImg, (x + 16, y + 10))
-
+    screen.blit(bulletImg, (x + 16, y + 10))  # Offset for center alignment
 
 def isCollision(enemyX, enemyY, bulletX, bulletY):
-    distance = math.sqrt(math.pow(enemyX - bulletX, 2) + (math.pow(enemyY - bulletY, 2)))
-    if distance < 27:
-        return True
-    else:
-        return False
+    """Check if bullet collides with enemy using distance formula"""
+    distance = math.sqrt(math.pow(enemyX - bulletX, 2) + math.pow(enemyY - bulletY, 2))
+    return distance < 27  # Collision if distance < threshold
 
+def draw_start_menu():
+    """
+    Draw the start menu with:
+    - Game title
+    - High score display
+    - Start game button
+    - Quit button
+    """
+    screen.fill(BLACK)  # Black background
+    
+    # Title with shadow effect
+    title_text = title_font.render("SPACE INVADER", True, BLUE)
+    title_shadow = title_font.render("SPACE INVADER", True, WHITE)
+    title_rect = title_text.get_rect(center=(403, 153))
+    screen.blit(title_shadow, title_rect)
+    title_rect = title_text.get_rect(center=(400, 150))
+    screen.blit(title_text, title_rect)
+    
+    # High score display
+    hs_text = button_font.render(f"High Score: {high_score}", True, WHITE)
+    hs_rect = hs_text.get_rect(center=(400, 230))
+    screen.blit(hs_text, hs_rect)
+    
+    # Start button (green)
+    start_rect = pygame.Rect(200, 300, 200, 60)
+    pygame.draw.rect(screen, GREEN, start_rect, border_radius=10)
+    pygame.draw.rect(screen, WHITE, start_rect, 2, border_radius=10)
+    start_text = button_font.render("Start Game", True, BLACK)
+    start_text_rect = start_text.get_rect(center=start_rect.center)
+    screen.blit(start_text, start_text_rect)
+    
+    # Quit button (red)
+    quit_rect = pygame.Rect(400, 300, 200, 60)
+    pygame.draw.rect(screen, RED, quit_rect, border_radius=10)
+    pygame.draw.rect(screen, WHITE, quit_rect, 2, border_radius=10)
+    quit_text = button_font.render("Quit", True, WHITE)
+    quit_text_rect = quit_text.get_rect(center=quit_rect.center)
+    screen.blit(quit_text, quit_text_rect)
+    
+    return start_rect, quit_rect  # Return button areas for click detection
 
-# Game Loop
-running = True
+# ==================== MAIN GAME LOOP ====================
+running = True  # Control variable for game running state
+restart_button = None  # Will store restart button rectangle
+quit_button = None     # Will store quit button rectangle
+menu_quit_button = None  # Will store menu quit button rectangle
+
 while running:
-
-    # RGB = Red, Green, Blue
-    screen.fill((0, 0, 0))
-    # Background Image
-    screen.blit(background, (0, 0))
+    # ========== EVENT HANDLING ==========
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT:  # Window close button
             running = False
 
-        # if keystroke is pressed check whether its right or left
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                playerX_change = -5
-            if event.key == pygame.K_RIGHT:
-                playerX_change = 5
-            if event.key == pygame.K_SPACE:
-                if bullet_state is "ready":
-                    bulletSound = mixer.Sound("laser.wav")
-                    bulletSound.play()
-                    # Get the current x cordinate of the spaceship
-                    bulletX = playerX
-                    fire_bullet(bulletX, bulletY)
+        # Menu screen event handling
+        if game_state == "menu":
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if start_button.collidepoint(event.pos):  # Start game clicked
+                    game_state = "play"
+                    game_over = False
+                elif menu_quit_button.collidepoint(event.pos):  # Quit clicked
+                    running = False
 
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                playerX_change = 0
+        # Gameplay event handling
+        elif game_state == "play":
+            if not game_over:
+                # Player movement controls
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LEFT:
+                        playerX_change = -5  # Move left
+                    if event.key == pygame.K_RIGHT:
+                        playerX_change = 5   # Move right
+                    if event.key == pygame.K_SPACE:
+                        if bullet_state == "ready":  # Fire bullet if ready
+                            bulletSound = mixer.Sound("laser.wav")
+                            bulletSound.play()
+                            bulletX = playerX
+                            fire_bullet(bulletX, bulletY)
 
-    # 5 = 5 + -0.1 -> 5 = 5 - 0.1
-    # 5 = 5 + 0.1
+                # Stop movement when key released
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                        playerX_change = 0
+            else:
+                # Game over screen buttons
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if restart_button and restart_button.collidepoint(event.pos):
+                        reset_game()  # Reset game state
+                        game_over = False
+                    elif quit_button and quit_button.collidepoint(event.pos):
+                        running = False  # Quit game
 
-    playerX += playerX_change
-    if playerX <= 0:
-        playerX = 0
-    elif playerX >= 736:
-        playerX = 736
+    # ========== MENU SCREEN ==========
+    if game_state == "menu":
+        start_button, menu_quit_button = draw_start_menu()
+        pygame.display.update()
+        continue  # Skip rest of loop while in menu
 
-    # Enemy Movement
-    for i in range(num_of_enemies):
+    # ========== GAME PLAY ==========
+    screen.fill(BLACK)  # Clear screen
+    screen.blit(background, (0, 0))  # Draw background
 
-        # Game Over
-        if enemyY[i] > 440:
-            for j in range(num_of_enemies):
-                enemyY[j] = 2000
-            game_over_text()
-            break
+    if not game_over:
+        # Update player position with boundary checking
+        playerX += playerX_change
+        playerX = max(0, min(playerX, 736))  # Keep within screen bounds
 
-        enemyX[i] += enemyX_change[i]
-        if enemyX[i] <= 0:
-            enemyX_change[i] = 4
-            enemyY[i] += enemyY_change[i]
-        elif enemyX[i] >= 736:
-            enemyX_change[i] = -4
-            enemyY[i] += enemyY_change[i]
+        # Enemy movement and collision handling
+        for i in range(num_of_enemies):
+            # Game over if enemy reaches bottom
+            if enemyY[i] > 440:
+                game_over = True
+                # Check for new high score
+                if score_value > high_score:
+                    new_high_score = True
+                    high_score = score_value
+                    save_high_score(high_score)  # Save to file
+                break
 
-        # Collision
-        collision = isCollision(enemyX[i], enemyY[i], bulletX, bulletY)
-        if collision:
-            explosionSound = mixer.Sound("explosion.wav")
-            explosionSound.play()
+            # Enemy movement with screen edge detection
+            enemyX[i] += enemyX_change[i]
+            if enemyX[i] <= 0:  # Hit left edge
+                enemyX_change[i] = 4
+                enemyY[i] += enemyY_change[i]  # Move down
+            elif enemyX[i] >= 736:  # Hit right edge
+                enemyX_change[i] = -4
+                enemyY[i] += enemyY_change[i]  # Move down
+
+            # Check for bullet-enemy collision
+            collision = isCollision(enemyX[i], enemyY[i], bulletX, bulletY)
+            if collision:
+                explosionSound = mixer.Sound("explosion.wav")
+                explosionSound.play()
+                bulletY = 480  # Reset bullet
+                bullet_state = "ready"
+                score_value += 1  # Increase score
+                # Respawn enemy at new random position
+                enemyX[i] = random.randint(0, 736)
+                enemyY[i] = random.randint(50, 150)
+
+            enemy(enemyX[i], enemyY[i], i)  # Draw enemy
+
+        # Bullet handling
+        if bulletY <= 0:  # Bullet reached top of screen
             bulletY = 480
             bullet_state = "ready"
-            score_value += 1
-            enemyX[i] = random.randint(0, 736)
-            enemyY[i] = random.randint(50, 150)
 
-        enemy(enemyX[i], enemyY[i], i)
+        if bullet_state == "fire":
+            fire_bullet(bulletX, bulletY)
+            bulletY -= bulletY_change  # Move bullet upward
 
-    # Bullet Movement
-    if bulletY <= 0:
-        bulletY = 480
-        bullet_state = "ready"
+        player(playerX, playerY)  # Draw player
+        show_score(textX, testY)  # Draw score display
+    else:
+        # Game over screen
+        restart_button, quit_button = game_over_screen()
+        show_score(textX, testY)  # Keep score visible
 
-    if bullet_state is "fire":
-        fire_bullet(bulletX, bulletY)
-        bulletY -= bulletY_change
+    pygame.display.update()  # Update display
 
-    player(playerX, playerY)
-    show_score(textX, testY)
-    pygame.display.update()
+# Clean up when game ends
+pygame.quit()

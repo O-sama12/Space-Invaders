@@ -18,16 +18,16 @@ screen = pygame.display.set_mode((800, 600))  # Set screen dimensions
 # Define color constants for easy reference
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)      # Used for positive actions (start, restart)
-RED = (255, 0, 0)        # Used for quit buttons
-BLUE = (0, 0, 128)       # Used for title text
-GOLD = (255, 215, 0)     # Used for high score celebration
+GREEN = (0, 255, 0)      
+RED = (255, 0, 0)        
+BLUE = (0, 0, 128)       
+GOLD = (255, 215, 0)     
 
 # ==================== GAME ASSETS ====================
-# Load background image and sounds
+
 background = pygame.image.load('background.png')
-mixer.music.load("background.wav")  # Background music
-mixer.music.play(-1)  # Play music on loop
+mixer.music.load("background.wav")  
+mixer.music.play(-1)  
 
 # Set window title and icon
 pygame.display.set_caption("Space Invader")
@@ -36,38 +36,38 @@ pygame.display.set_icon(icon)
 
 # ==================== PLAYER SETUP ====================
 playerImg = pygame.image.load('player.png')
-playerX = 370  # Initial X position (centered)
-playerY = 480  # Initial Y position (near bottom)
-playerX_change = 0  # Movement speed
+playerX = 370  
+playerY = 480  
+playerX_change = 0  
 
 # ==================== ENEMY SETUP ====================
-enemyImg = []  # List to store enemy images
-enemyX = []    # List for enemy X positions
-enemyY = []    # List for enemy Y positions
-enemyX_change = []  # List for enemy horizontal speed
-enemyY_change = []  # List for enemy vertical drop amount
-num_of_enemies = 6  # Total number of enemies
+enemyImg = []  
+enemyX = []    
+enemyY = []    
+enemyX_change = []  
+enemyY_change = []  
+num_of_enemies = 6  
 
 # Initialize enemies with random positions
 for i in range(num_of_enemies):
     enemyImg.append(pygame.image.load('enemy.png'))
-    enemyX.append(random.randint(0, 736))  # Random X within screen bounds
-    enemyY.append(random.randint(50, 150))  # Random Y in top area
-    enemyX_change.append(4)  # Initial horizontal speed
-    enemyY_change.append(40)  # Amount to drop when hitting screen edge
-
+    enemyX.append(random.randint(0, 736))  
+    enemyY.append(random.randint(50, 150))  
+    enemyX_change.append(4)  
+    enemyY_change.append(40)  
+    
 # ==================== BULLET SETUP ====================
 bulletImg = pygame.image.load('bullet.png')
-bulletX = 0  # Initial position (updated when fired)
-bulletY = 480  # Starts at player height
-bulletX_change = 0  # No horizontal movement
-bulletY_change = 10  # Speed moving upward
-bullet_state = "ready"  # "ready" or "fire" state
+bulletX = 0  
+bulletY = 480  
+bulletX_change = 0  
+bulletY_change = 10  
+bullet_state = "ready"  
 
 # ==================== SCORE SYSTEM ====================
-score_value = 0  # Current game score
-high_score = 0   # All-time high score
-new_high_score = False  # Flag for new high score achievement
+score_value = 0  
+high_score = 0   
+new_high_score = False  
 
 # Try to load previous high score from file
 try:
@@ -242,10 +242,10 @@ def draw_start_menu():
     return start_rect, quit_rect  # Return button areas for click detection
 
 # ==================== MAIN GAME LOOP ====================
-running = True  # Control variable for game running state
-restart_button = None  # Will store restart button rectangle
-quit_button = None     # Will store quit button rectangle
-menu_quit_button = None  # Will store menu quit button rectangle
+running = True  
+restart_button = None  
+quit_button = None     
+menu_quit_button = None  
 
 while running:
     # ========== EVENT HANDLING ==========
@@ -256,7 +256,7 @@ while running:
         # Menu screen event handling
         if game_state == "menu":
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if start_button.collidepoint(event.pos):  # Start game clicked
+                if start_button.collidepoint(event.pos):  
                     game_state = "play"
                     game_over = False
                 elif menu_quit_button.collidepoint(event.pos):  # Quit clicked
@@ -265,14 +265,14 @@ while running:
         # Gameplay event handling
         elif game_state == "play":
             if not game_over:
-                # Player movement controls
+                
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_LEFT:
                         playerX_change = -5  # Move left
                     if event.key == pygame.K_RIGHT:
                         playerX_change = 5   # Move right
                     if event.key == pygame.K_SPACE:
-                        if bullet_state == "ready":  # Fire bullet if ready
+                        if bullet_state == "ready":  
                             bulletSound = mixer.Sound("laser.wav")
                             bulletSound.play()
                             bulletX = playerX
@@ -295,69 +295,69 @@ while running:
     if game_state == "menu":
         start_button, menu_quit_button = draw_start_menu()
         pygame.display.update()
-        continue  # Skip rest of loop while in menu
+        continue  
 
     # ========== GAME PLAY ==========
-    screen.fill(BLACK)  # Clear screen
-    screen.blit(background, (0, 0))  # Draw background
+    screen.fill(BLACK)  
+    screen.blit(background, (0, 0))  
 
     if not game_over:
-        # Update player position with boundary checking
+        
         playerX += playerX_change
-        playerX = max(0, min(playerX, 736))  # Keep within screen bounds
+        playerX = max(0, min(playerX, 736))  
 
-        # Enemy movement and collision handling
+        
         for i in range(num_of_enemies):
-            # Game over if enemy reaches bottom
+            
             if enemyY[i] > 440:
                 game_over = True
-                # Check for new high score
+                
                 if score_value > high_score:
                     new_high_score = True
                     high_score = score_value
-                    save_high_score(high_score)  # Save to file
+                    save_high_score(high_score)  
                 break
 
-            # Enemy movement with screen edge detection
+            
             enemyX[i] += enemyX_change[i]
-            if enemyX[i] <= 0:  # Hit left edge
+            if enemyX[i] <= 0:  
                 enemyX_change[i] = 4
-                enemyY[i] += enemyY_change[i]  # Move down
-            elif enemyX[i] >= 736:  # Hit right edge
+                enemyY[i] += enemyY_change[i]  
+            elif enemyX[i] >= 736:  
                 enemyX_change[i] = -4
-                enemyY[i] += enemyY_change[i]  # Move down
+                enemyY[i] += enemyY_change[i]  
 
-            # Check for bullet-enemy collision
+            
             collision = isCollision(enemyX[i], enemyY[i], bulletX, bulletY)
             if collision:
                 explosionSound = mixer.Sound("explosion.wav")
                 explosionSound.play()
-                bulletY = 480  # Reset bullet
+                bulletY = 480  
                 bullet_state = "ready"
-                score_value += 1  # Increase score
-                # Respawn enemy at new random position
+                score_value += 1  
+                
                 enemyX[i] = random.randint(0, 736)
                 enemyY[i] = random.randint(50, 150)
 
-            enemy(enemyX[i], enemyY[i], i)  # Draw enemy
-
+            enemy(enemyX[i], enemyY[i], i)  
+            
         # Bullet handling
-        if bulletY <= 0:  # Bullet reached top of screen
+        if bulletY <= 0:  
             bulletY = 480
             bullet_state = "ready"
 
         if bullet_state == "fire":
             fire_bullet(bulletX, bulletY)
-            bulletY -= bulletY_change  # Move bullet upward
+            bulletY -= bulletY_change  
 
-        player(playerX, playerY)  # Draw player
-        show_score(textX, testY)  # Draw score display
+        player(playerX, playerY)  
+        show_score(textX, testY)  
     else:
-        # Game over screen
+        
         restart_button, quit_button = game_over_screen()
-        show_score(textX, testY)  # Keep score visible
+        show_score(textX, testY)  
 
-    pygame.display.update()  # Update display
+    pygame.display.update()  
 
-# Clean up when game ends
+
 pygame.quit()

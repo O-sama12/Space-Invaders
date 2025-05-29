@@ -79,7 +79,7 @@ except:
 # Font setup for score display
 font = pygame.font.Font('freesansbold.ttf', 32)
 textX = 10  # Score position
-testY = 10
+textY = 10
 
 # ==================== GAME STATE MANAGEMENT ====================
 game_state = "menu"  # "menu", "play", or potentially others
@@ -132,7 +132,7 @@ def show_score(x, y):
     screen.blit(score, (x, y))
     
     high_score_text = font.render(f"High Score: {high_score}", True, WHITE)
-    scree.blit(high_score_text, (x, y + 40))
+    screen.blit(high_score_text, (x, y + 40))
 
 def game_over_screen():
     """
@@ -351,11 +351,11 @@ while running:
             bulletY -= bulletY_change  
 
         player(playerX, playerY)  
-        show_score(textX, testY)  
+        show_score(textX, textY)  
     else:
         
         restart_button, quit_button = game_over_screen()
-        show_score(textX, testY)  
+        show_score(textX, textY)  
 
     pygame.display.update()  
 
